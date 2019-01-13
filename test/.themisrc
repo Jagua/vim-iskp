@@ -1,0 +1,9 @@
+call themis#helper('command').with(themis#helper('assert'))
+
+call themis#option('reporter', 'tap')
+
+if !empty($PROFILE_LOG)
+  profile start $PROFILE_LOG
+  profile! file autoload/*
+  profile! file plugin/*.vim
+endif

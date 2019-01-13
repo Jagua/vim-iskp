@@ -1,0 +1,391 @@
+let s:scope = themis#helper('scope')
+
+Context <Plug>(iskp)
+  It is available in proper modes
+    Assert Equals(maparg('<Plug>(iskp)', 'c'), '')
+    Assert Equals(maparg('<Plug>(iskp)', 'i'), '')
+    Assert Equals(maparg('<Plug>(iskp)', 'o'), '')
+    Assert Match(maparg('<Plug>(iskp)', 'n'), 'iskp#')
+    Assert Match(maparg('<Plug>(iskp)', 'v'), 'iskp#')
+  End
+End
+
+Describe iskp#define(outputter)
+  It should register outputter to g:iskp_outputters
+    call iskp#define({'Name' : 'dummy', 'Run' : {ctx -> execute('')}})
+    Assert HasKey(g:iskp_outputters, 'dummy')
+  End
+End
+
+Describe iskp#complete(lead, cmd, pos)
+  It should allow abbreviated option
+    Assert Equals(iskp#complete('-h', 'Iskp -h', strlen('Iskp -h')), ['-help'])
+    Assert Equals(iskp#complete('-he', 'Iskp -he', strlen('Iskp -he')), ['-help'])
+    Assert Equals(iskp#complete('-prev', 'Iskp -prev', strlen('Iskp -prev')), ['-preview'])
+  End
+End
+
+Describe iskp#on_FileType()
+  Before
+    new
+  End
+
+  After
+    close!
+  End
+
+  It should not map to 'K' if g:no_plugin_maps is defined
+    call iskp#on_FileType()
+    Assert Equals(maparg('K', 'n'), '<Plug>(iskp)')
+    nunmap <buffer> K
+
+    let g:no_plugin_maps = 1
+    call iskp#on_FileType()
+    Assert Equals(maparg('K', 'n'), '')
+    unlet g:no_plugin_maps
+  End
+
+  It should not map to 'K' if g:no_iskp_maps is defined
+    let g:no_iskp_maps = 1
+    call iskp#on_FileType()
+    Assert Equals(maparg('K', 'n'), '')
+    unlet g:no_iskp_maps
+  End
+
+  It should not map to 'K' if b:no_iskp_maps is defined
+    let b:no_iskp_maps = 1
+    call iskp#on_FileType()
+    Assert Equals(maparg('K', 'n'), '')
+    unlet b:no_iskp_maps
+  End
+End
+
+Describe iskp#run
+  Context (outputter_name[, ctx])
+    Before
+      new
+      put = ['DUMMY_TEXT']
+      1 delete _
+      let fake_echo_cmd = "vim -i NONE -u NONE -N -X -V1 -e -s --cmd 'echo join(argv(),\"\\n\")' --cmd quit"
+      execute printf('setlocal keywordprg=%s', escape(fake_echo_cmd, ' "'))
+      call iskp#define({
+            \ 'Name' : 'var',
+            \ 'Run' : {ctx -> execute([
+            \   'let g:test_ctx = ctx',
+            \   'let g:test_iskp_output = systemlist(ctx.cmdln)',
+            \ ])},
+            \})
+      call iskp#run('var')
+    End
+
+    After
+      unlet g:test_ctx
+      unlet g:test_iskp_output
+      bdelete!
+    End
+
+    It should extend ctx properties
+      Assert HasKey(g:test_ctx, 'word')
+      Assert IsString(g:test_ctx.word)
+      Assert HasKey(g:test_ctx, 'cmdln')
+      Assert IsString(g:test_ctx.cmdln)
+      Assert HasKey(g:test_ctx, 'cmdlns')
+      Assert IsList(g:test_ctx.cmdlns)
+      Assert HasKey(g:test_ctx, 'filetype')
+      Assert IsString(g:test_ctx.filetype)
+      Assert Equals(g:test_ctx.word, 'DUMMY_TEXT')
+    End
+
+    It should work
+      Assert Equals(get(g:, 'test_iskp_output', []), ['DUMMY_TEXT'])
+    End
+  End
+End
+
+Describe iskp#outputter#default#new().Run(ctx)
+  It should run a terminal if available
+    if !has('terminal')
+      Skip Vim not enabled +terminal feature
+    endif
+
+    call iskp#outputter#default#new()
+          \.Run({'cmdln': 'vim --version', 'cmdlns': ['vim', '--version'], 'job' : 0})
+    Assert Equals(len(term_list()), 1)
+    bdelete!
+  End
+
+  It should print text in the terminal if available
+    if !has('terminal')
+      Skip Vim not enabled +terminal feature
+    endif
+
+    call iskp#outputter#default#new()
+          \.Run({'cmdln': 'vim --version', 'cmdlns': ['vim', '--version'], 'job' : 0})
+    let timeout_msec = 5000
+    let interval = 10
+    let ctr = 0
+    while term_getstatus(term_list()[0]) ==# 'running' && ctr * interval < timeout_msec
+      execute printf('sleep %dm', interval)
+      let ctr += 1
+    endwhile
+    Assert Match(getline(1), 'VIM - Vi IMproved')
+    bdelete!
+  End
+End
+
+Describe iskp#outputter#buffer#new().Run(ctx)
+  It should print text in the new buffer
+    call iskp#outputter#buffer#new()
+          \.Run({'cmdln': 'vim --version', 'cmdlns': ['vim', '--version'], 'job' : 0})
+    Assert Match(getline(1), 'VIM - Vi IMproved')
+    close!
+  End
+End
+
+Describe iskp#outputter#preview#new().Run(ctx)
+  It should print text in the preview window
+    if !has('quickfix')
+      Skip Vim not enabled +quickfix feature
+    endif
+
+    call iskp#outputter#preview#new()
+          \.Run({'cmdln': 'vim --version', 'cmdlns': ['vim', '--version'], 'job' : 0})
+    Assert True(&previewwindow)
+    Assert Match(getline(1), 'VIM - Vi IMproved')
+    pclose!
+  End
+End
+
+Describe iskp#outputter#terminal#new().Run(ctx)
+  It should print text in the terminal window
+    if !has('terminal')
+      Skip Vim not enabled +terminal feature
+    endif
+
+    Assert Equals(len(term_list()), 0)
+    let l:term_buf = iskp#outputter#terminal#new()
+          \.Run({'cmdlns': ['vim', '--version']})
+          \.Wait({'timeout' : 3000}).buf
+    Assert Equals(len(term_list()), 1)
+    Assert Equals(&buftype, 'terminal')
+    Assert Match(getbufline(l:term_buf, 1)[0], 'VIM - Vi IMproved')
+    bdelete!
+  End
+End
+
+Describe iskp#new_buffer(lines, ctx)
+  It should create a new buffer and print text
+    call iskp#new_buffer(['1', '2'], {})
+    Assert Equals(getline(1, '$'), ['1', '2'])
+    bdelete!
+  End
+End
+
+Describe iskp#new_preview(lines, ctx)
+  It should open a preview window and print text
+    call iskp#new_preview(['1', '2'], {})
+    Assert True(&previewwindow)
+    Assert Equals(getline(1, '$'), ['1', '2'])
+    bdelete!
+  End
+End
+
+Describe iskp#set_buffer_local_options(ctx)
+  It should work
+    new
+    call iskp#set_buffer_local_options({})
+    Assert Equals(&filetype, 'iskp.iskp_')
+    close!
+  End
+End
+
+Describe iskp#strip_lines(lines)
+  It should remove blank lines at head and tail if exists
+    Assert Equals(iskp#strip_lines([]), [])
+    Assert Equals(iskp#strip_lines(['']), [])
+    Assert Equals(iskp#strip_lines(['', 'text']), ['text'])
+    Assert Equals(iskp#strip_lines(['text', '']), ['text'])
+    Assert Equals(iskp#strip_lines(['', '  ', 'text 1', '  ', 'text 2', '', ' ']),
+          \ ['text 1', '  ', 'text 2'])
+  End
+End
+
+Describe iskp#strdisplayheight(lines)
+  It should return proper display height
+    Assert Equals(iskp#strdisplayheight([]), 0)
+    Assert Equals(iskp#strdisplayheight(['']), 1)
+    Assert Equals(iskp#strdisplayheight(['', '']), 2)
+    Assert Equals(iskp#strdisplayheight([repeat('a', winwidth(0) * 1 + 0)]), 1)
+    Assert Equals(iskp#strdisplayheight([repeat('a', winwidth(0) * 1 + 1)]), 2)
+    Assert Equals(iskp#strdisplayheight([repeat('a', winwidth(0) * 2 + 1)]), 3)
+  End
+End
+
+Describe iskp
+  Before
+    new
+    setlocal iskeyword^=.
+    let lines = ['fmt.Printf("Hello")']
+    put = lines
+    1 delete _
+  End
+
+  After
+    bdelete!
+  End
+
+  Describe #get_bufname()
+    It should return a bufname built with word
+      Assert Equals(iskp#get_bufname({}), '*iskp-*')
+      Assert Equals(iskp#get_bufname({'word' : 'KeyWord'}), '*iskp-KeyWord*')
+    End
+  End
+
+  Context #get_keyword('n')
+    It should return a keyword under the cursor
+      Assert Equals(iskp#get_keyword('n'), 'fmt.Printf')
+    End
+  End
+
+  Context #get_keyword('n')
+    It should return a proper keyword even if &selection is 'exclusive'
+      setglobal selection=exclusive
+      Assert Equals(iskp#get_keyword('n'), 'fmt.Printf')
+      setglobal selection&
+    End
+  End
+
+  Context #get_keyword('v')
+    It should return a selected keyword
+      Assert Equals(getpos('.'), [0, 1, 1, 0])
+      " Note: trailing <Esc> is important for "'<" and "'>"
+      execute "normal! vll\<Esc>"
+      Assert Equals(getpos('''<'), [0, 1, 1, 0])
+      Assert Equals(getpos('''>'), [0, 1, 3, 0])
+      Assert Equals(iskp#get_keyword('v'), 'fmt')
+    End
+
+    It should return a selected keyword even if &selection is 'exclusive'
+      setglobal selection=exclusive
+
+      Assert Equals(getpos('.'), [0, 1, 1, 0])
+      " Note: trailing <Esc> is important for "'<" and "'>"
+      execute "normal! vll\<Esc>"
+      Assert Equals(getpos('''<'), [0, 1, 1, 0])
+      Assert Equals(getpos('''>'), [0, 1, 3, 0])
+      Assert Equals(iskp#get_keyword('v'), 'fmt')
+
+      setglobal selection&
+    End
+  End
+End
+
+Describe s:
+  Before all
+    let funcs = s:scope.funcs('autoload/iskp.vim')
+  End
+
+  After all
+    unlet funcs
+  End
+
+  Describe parse_args(args)
+    It should return a dictionary built with args
+      Assert Equals(funcs.parse_args([]), {})
+      Assert Equals(funcs.parse_args(['-preview', 'KEYWORD']),
+            \ {'outputter_name' : 'preview', 'word' : 'KEYWORD'})
+      Assert Equals(funcs.parse_args(['-preview']), {'outputter_name' : 'preview'})
+    End
+  End
+
+  Describe echo_help()
+    It should print a help message starting with "Iskp" the application name
+      Assert Match(trim(execute('call funcs.echo_help()', '')), 'Iskp')
+    End
+  End
+
+  Describe set_iskeyword()
+    It should append the value of b:iskp_iskeyword to &iskeyword
+      new
+      let b:iskp_iskeyword = '.'
+      setlocal iskeyword=w
+      call funcs.set_iskeyword()
+      Assert Equals(&iskeyword, 'w,.')
+      bdelete!
+    End
+  End
+
+  Describe unset_iskeyword()
+    It should remove the value of b:iskp_iskeyword from &iskeyword
+      new
+      let b:iskp_iskeyword = '.'
+      setlocal iskeyword=w,.
+      call funcs.unset_iskeyword()
+      Assert Equals(&iskeyword, 'w')
+      bdelete!
+    End
+  End
+
+  Describe set_or_unset_iskeyword
+    Context ('+')
+      It should append the value of b:iskp_iskeyword to &iskeyword
+        new
+        let b:iskp_iskeyword = '.'
+        setlocal iskeyword=w
+        call funcs.set_or_unset_iskeyword('+')
+        Assert Equals(&iskeyword, 'w,.')
+        bdelete!
+      End
+    End
+
+    Context ('-')
+      It should remove the value of b:iskp_iskeyword from &iskeyword
+        new
+        let b:iskp_iskeyword = '.'
+        setlocal iskeyword=w,.
+        call funcs.set_or_unset_iskeyword('-')
+        Assert Equals(&iskeyword, 'w')
+        bdelete!
+      End
+    End
+  End
+
+  Describe echo_none_keyword()
+    It should print a message with "iskp:" prefix
+      Assert Match(trim(execute('call funcs.echo_none_keyword()', '')), 'iskp:')
+    End
+  End
+End
+
+Describe K
+  Before
+    new
+    setlocal filetype=go
+    let fake_echo_cmd = "vim -i NONE -u NONE -N -X -V1 -e -s --cmd 'echo join(argv(),\"\\n\")' --cmd quit"
+    execute printf('setlocal keywordprg=%s', escape(fake_echo_cmd, ' "'))
+
+    nnoremap <buffer> <Plug>(iskp) :<C-u>call iskp#run('buffer', {'mode' : 'n', 'job' : 0})<CR>
+    vnoremap <buffer> <Plug>(iskp) :<C-u>call iskp#run('buffer', {'mode' : 'v', 'job' : 0})<CR>
+
+    setlocal iskeyword^=.
+    let lines = ['fmt.Printf("Hello")']
+    put = lines
+    1 delete _
+  End
+
+  After
+    bdelete!
+  End
+
+  It should work in normal mode
+    normal K
+    Assert Equals(getline(1), 'fmt.Printf')
+  End
+
+  It should work in visual mode
+    Assert Equals(getpos('.'), [0, 1, 1, 0])
+    " Note: trailing <Esc> is important for "'<" and "'>"
+    execute "normal vllK\<Esc>"
+    Assert Equals(getline(1), 'fmt')
+  End
+End

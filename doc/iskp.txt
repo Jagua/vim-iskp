@@ -1,0 +1,205 @@
+*iskp.txt*  iskp: K improved
+
+Version: 0.1.0
+Author: Jagua
+License: MIT License
+
+
+
+==============================================================================
+INTRODUCTION                                               *iskp-introduction*
+
+*iskp* is a Vim plugin to improve |K|.
+
+|K| prints the output like |:echo| when |'keywordprg'| does not start with ':'.
+Therefore its browsability is lower than the output in buffer because can not
+search and do not apply highlight.  This plugin improves them to print the
+output in |preview-window| or |terminal-window| and so on.
+
+iskp can specify the destination of the output of |keywordprg| with
+|b:iskp_outputter| variable.
+
+
+Requirements:
+- Vim
+
+Optionals:
+- |+job|
+- |+terminal|
+- |+quickfix|
+
+Latest version:
+https://github.com/Jagua/vim-iskp
+
+
+
+==============================================================================
+SETTINGS                                                       *iskp-settings*
+
+
+                                                            *b:iskp_outputter*
+b:iskp_outputter        String
+        Specify an outputter source name.
+        If this variable is not defined in a buffer, "default" is used as
+        outputter.
+        See |iskp-outputter-builtin-sources| and
+        |iskp-example-b:iskp_outputter|.
+
+                                                            *b:iskp_iskeyword*
+b:iskp_iskeyword        String
+        If this variable is defined in a buffer, appends to |'iskeyword'| only
+        while the word under the cursor is got.
+        See |iskp-example-b:iskp_iskeyword|.
+
+
+
+==============================================================================
+INTERFACE                                                     *iskp-interface*
+
+------------------------------------------------------------------------------
+FUNCTIONS                                                     *iskp-functions*
+
+
+iskp#define({source})                                          *iskp#define()*
+                Define outputter.
+
+                {source}        Dictionary
+                                See |iskp-outputter-source-object|.
+
+                See |iskp-example-iskp#define()|.
+
+
+iskp#run({source-name}[, {ctx}])                                  *iskp#run()*
+                Should do the display of output.
+
+                {source-name}   String
+                                A name of a defined outputter source.
+
+                {ctx}           Dictionary
+                                See |iskp-ctx-notation|.
+
+
+                                                           *iskp-ctx-notation*
+ctx-notation~
+               If you add a new property to ctx, its key should be named with
+               '_' prefix. (ex. 'ctx._new_key')
+
+               "mode"           String
+                                'n' (normal) or 'v' (visual).
+
+               "word"           String
+                                If this value is empty or this key does not
+                                exist, |<cword>| is used instead.
+
+
+
+==============================================================================
+OUTPUTTER SOURCES                                     *iskp-outputter-sources*
+
+
+There are two ways to define outputter sources:
+
+1. Use |iskp#define()| function. See |iskp-example-iskp#define()|.
+
+2. Locate the outputter source at 'autoload/iskp/outputter/' directory in
+   |'runtimepath'|.  The source should have
+   |iskp#outputter#{source-name}#new()| function, and they are automatically
+   loaded by default.
+
+
+                                          *iskp#outputter#{source-name}#new()*
+iskp#outputter#{source-name}#new()
+        Should return an |iskp-outputter-source-object|.
+
+
+------------------------------------------------------------------------------
+OUTPUTTER SOURCE OBJECT                        *iskp-outputter-source-object*
+
+Outputter source object should be a dictionary, and must have the following
+items.
+
+        "Name"          String
+                        Source name.
+
+        "Run"           Funcref
+                        Should do the output.
+
+                        This function must have the following argument.
+
+                        {ctx}           Dictionary
+                                        See |iskp-outputter-ctx|.
+
+
+------------------------------------------------------------------------------
+OUTPUTTER CONTEXT                                         *iskp-outputter-ctx*
+
+{ctx} is a dictionary, and must have the following items. They are used in
+'Run()' function of |iskp-outputter-source-object|.
+
+
+        "word"          String
+                        The word under the cursor.
+
+        "cmdln"         String
+                        Command line built with &keywordprg and word.
+                        Useful for |system()| or |systemlist()|.
+
+        "cmdlns"        List
+                        Command line built with &keywordprg and word.
+                        Useful for |job_start()| or |term_start()|.
+
+        "filetype"      String
+                        Filetype.
+
+
+------------------------------------------------------------------------------
+OUTPUTTER BUILTIN SOURCES                     *iskp-outputter-builtin-sources*
+
+        default         output in terminal if available, otherwise in buffer.
+
+        buffer          output in new buffer.
+
+        preview         output in |preview-window|.
+
+        terminal        output in |terminal-window|.
+
+
+
+==============================================================================
+EXAMPLES                                                       *iskp-examples*
+
+
+                                                  *iskp-example-iskp#define()*
+        Define iskp source: "echo"
+>
+        call iskp#define({
+              \ 'Name' : 'echo',
+              \ 'Run' : {ctx -> execute('echo trim(system(ctx.cmdln))', '')},
+              \})
+<
+
+                                               *iskp-example-b:iskp_outputter*
+        Use |terminal-window| in Ruby
+>
+        autocmd FileType ruby let b:iskp_outputter = 'terminal'
+        autocmd FileType ruby setlocal keywordprg=ri\ --no-pager
+              \\ --no-interactive\ --format=ansi
+<
+
+
+                                               *iskp-example-b:iskp_iskeyword*
+>
+        autocmd FileType ruby let b:iskp_iskeyword = '.'
+<
+
+
+==============================================================================
+CHANGELOG                                                     *iskp-changelog*
+
+0.1.0   2018-02-10
+        - Initial version.
+
+
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:et:norl:fen:fdl=0:
