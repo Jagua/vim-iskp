@@ -89,8 +89,8 @@ function! iskp#new_buffer(lines, ctx) abort
   execute printf('%s %s %s', opener, height, bufname)
 
   " Note: Using execute() prevents to print '\d\+ more lines' message.
-  "       'put = a:lines' (without execute()) prints its message.
-  call execute('put = a:lines')
+  "       'put = lines' (without execute()) prints its message.
+  call execute('put = lines')
   1 delete _
   call iskp#set_buffer_local_options(a:ctx)
 endfunction
@@ -109,8 +109,8 @@ function! iskp#new_preview(lines, ctx) abort
   wincmd P
 
   " Note: Using execute() prevents to print '\d\+ more lines' message.
-  "       'put = a:lines' (without execute()) prints its message.
-  call execute('put = a:lines')
+  "       'put = lines' (without execute()) prints its message.
+  call execute('put = lines')
   1 delete _
   call iskp#set_buffer_local_options(a:ctx)
 endfunction
