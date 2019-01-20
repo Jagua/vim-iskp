@@ -3,7 +3,7 @@
 all: lint test
 
 lint:
-	vimlparser plugin/*.vim  autoload/*.vim > /dev/null
+	vimlparser plugin/*.vim autoload/*.vim > /dev/null
 	vint autoload plugin
 
 test:
