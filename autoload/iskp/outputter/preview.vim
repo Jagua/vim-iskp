@@ -9,7 +9,6 @@ let s:Outputter.Name = 'preview'
 function! s:Run(ctx) abort
   if has('job') && get(a:ctx, 'job', 1)
     return job_start(a:ctx.cmdlns, {
-          \ 'out_mode' : 'raw',
           \ 'close_cb' : function('s:close_cb', [a:ctx]),
           \})
   else
@@ -21,11 +20,10 @@ let s:Outputter.Run = function('s:Run')
 
 
 function! s:close_cb(ctx, ch) abort
-  let msg = ''
-  while ch_canread(a:ch) && ch_status(a:ch) ==# 'buffered'
-    let msg .= ch_readraw(a:ch)
+  let lines = []
+  while ch_status(a:ch, {'part' : 'out'}) ==# 'buffered'
+    call add(lines, ch_read(a:ch))
   endwhile
-  let lines = split(msg, '\n')
   return iskp#new_preview(lines, a:ctx)
 endfunction
 
