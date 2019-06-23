@@ -1,6 +1,6 @@
 *iskp.txt*  iskp: K improved
 
-Version: 0.1.0
+Version: 0.1.1
 Author: Jagua
 License: MIT License
 
@@ -26,6 +26,7 @@ Requirements:
 Optionals:
 - |+job|
 - |+terminal|
+- |+textprop|
 - |+quickfix|
 
 Latest version:
@@ -159,6 +160,8 @@ OUTPUTTER BUILTIN SOURCES                     *iskp-outputter-builtin-sources*
 
         buffer          output in new buffer.
 
+        popup           output in |popup-window|.
+
         preview         output in |preview-window|.
 
         terminal        output in |terminal-window|.
@@ -195,6 +198,9 @@ EXAMPLES                                                       *iskp-examples*
 
 ==============================================================================
 CHANGELOG                                                     *iskp-changelog*
+
+0.1.1   2019-06-23
+        - Add popup outputter.
 
 0.1.0   2018-02-10
         - Initial version.
