@@ -119,7 +119,7 @@ endfunction
 function! iskp#set_buffer_local_options(ctx) abort
   setlocal buftype=nofile readonly nofoldenable nomodified nomodifiable
   setlocal noswapfile nowritebackup bufhidden=delete nobuflisted
-  execute printf('setlocal filetype=iskp.iskp_%s', get(a:ctx, 'filetype', ''))
+  execute printf('setlocal filetype=iskp.iskp_%s', a:ctx.filetype)
 endfunction
 
 
