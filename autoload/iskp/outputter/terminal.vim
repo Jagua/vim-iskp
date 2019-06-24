@@ -8,7 +8,7 @@ let s:Outputter.Name = 'terminal'
 
 function! s:Run(ctx, ...) abort dict
   if !has('timers')
-    echoerr 'iskp: require Vim enabled +timers feature'
+    throw 'iskp: require Vim enabled +timers feature'
   endif
   let l:Rewind = {ch -> execute([
         \ 'if has("nvim")',
@@ -36,7 +36,7 @@ let s:Outputter.buf = 0
 
 function! s:Wait(opt) abort dict
   if has('nvim')
-    echoerr 'iskp: outputter/terminal: s:Wait() does not work in Nvim'
+    throw 'iskp: outputter/terminal: s:Wait() does not work in Nvim'
   endif
   let timeout_default = 5000
   let timeout = get(a:opt, 'timeout', timeout_default)
@@ -65,7 +65,7 @@ function! s:term(cmd, term_opts) abort
     new
     return termopen(a:cmd, a:term_opts)
   else
-    echoerr 'iskp: require Vim enabled +terminal feature'
+    throw 'iskp: require Vim enabled +terminal feature'
   endif
 endfunction
 

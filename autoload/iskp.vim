@@ -8,10 +8,10 @@ lockvar g:iskp_outputters
 
 function! iskp#define(outputter) abort
   if !has_key(a:outputter, 'Name')
-    echoerr printf('iskp: not found Name key in %s', string(a:outputter))
+    throw printf('iskp: not found Name key in %s', string(a:outputter))
   endif
   if !has_key(a:outputter, 'Run')
-    echoerr printf('iskp: not found Run key in %s', string(a:outputter))
+    throw printf('iskp: not found Run key in %s', string(a:outputter))
   endif
   let name = get(a:outputter, 'Name')
   unlockvar g:iskp_outputters
@@ -41,7 +41,7 @@ function! iskp#run(...) abort
   else
     let outputter_name = get(a:, '1')
     if !has_key(g:iskp_outputters, outputter_name)
-      echoerr printf('iskp: invalid outputter name: %s', outputter_name)
+      throw printf('iskp: invalid outputter name: %s', outputter_name)
     endif
   endif
   let outputter = g:iskp_outputters[outputter_name]

@@ -16,7 +16,7 @@ function! s:Run(ctx) abort
   elseif has_key(g:iskp_outputters, 'buffer')
     return g:iskp_outputters['buffer'].Run(a:ctx)
   else
-    echoerr 'iskp: outputter "default" internal error'
+    throw 'iskp: outputter "default" internal error'
   endif
 endfunction
 let s:Outputter.Run = function('s:Run')
