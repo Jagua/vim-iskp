@@ -7,6 +7,10 @@ os:
 
 sudo: false
 
+addons:
+  apt:
+    update: true
+
 before_script:
   - git clone --depth 1 https://github.com/thinca/vim-themis /tmp/vim-themis
 
