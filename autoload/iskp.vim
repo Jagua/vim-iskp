@@ -77,43 +77,60 @@ function! iskp#on_FileType() abort
 endfunction
 
 
-function! iskp#new_buffer(lines, ctx) abort
-  let lines = iskp#strip_lines(a:lines)
-  let bufname = iskp#get_bufname(a:ctx)
-  let opener = get(a:ctx, 'open', 'new')
-  if winheight(0) > iskp#strdisplayheight(lines)
-    let height = printf('+resize\ %d', iskp#strdisplayheight(lines))
-  else
-    let height = ''
-  endif
-  execute printf('%s %s %s', opener, height, bufname)
-
-  " Note: Using execute() prevents to print '\d\+ more lines' message.
-  "       'put = lines' (without execute()) prints its message.
-  call execute('put = lines')
-  1 delete _
-  call iskp#set_buffer_local_options(a:ctx)
+function! iskp#execute_cmd(ctx, callback) abort
+  call s:execute_cmd(a:ctx, function(a:callback, [a:ctx]))
 endfunction
 
 
-function! iskp#new_preview(lines, ctx) abort
-  let lines = iskp#strip_lines(a:lines)
-  let bufname = iskp#get_bufname(a:ctx)
-  let opener = get(a:ctx, 'open', 'pedit')
-  if &previewheight > iskp#strdisplayheight(lines)
-    let height = printf('+resize\ %d', iskp#strdisplayheight(lines))
-  else
-    let height = ''
-  endif
-  execute printf('%s %s %s', opener, height, bufname)
-  wincmd P
+if !has('nvim')
+  function! s:execute_cmd(ctx, callback) abort
+    if has('job') && get(a:ctx, 'job', 1)
+      return job_start(a:ctx.cmdlns, {
+            \ 'close_cb' : function('s:close_cb', [a:callback]),
+            \})
+    else
+      let lines = systemlist(a:ctx.cmdln)
+      let lines = iskp#strip_lines(lines)
+      return a:callback(lines)
+    endif
+  endfunction
 
-  " Note: Using execute() prevents to print '\d\+ more lines' message.
-  "       'put = lines' (without execute()) prints its message.
-  call execute('put = lines')
-  1 delete _
-  call iskp#set_buffer_local_options(a:ctx)
-endfunction
+
+  function! s:close_cb(callback, ch) abort
+    let lines = []
+    while ch_status(a:ch, {'part' : 'out'}) ==# 'buffered'
+      call add(lines, ch_read(a:ch))
+    endwhile
+    let lines = iskp#strip_lines(lines)
+    return a:callback(lines)
+  endfunction
+else
+  function! s:execute_cmd(ctx, callback) abort
+    if exists('*jobstart') && get(a:ctx, 'job', 1)
+      return jobstart(a:ctx.cmdlns, {
+            \ '_chunks' : [''],
+            \ 'on_stdout' : function('s:on_stdout'),
+            \ 'on_exit' : function('s:on_exit', [a:callback]),
+            \})
+    else
+      let lines = systemlist(a:ctx.cmdln)
+      let lines = iskp#strip_lines(lines)
+      return a:callback(lines)
+    endif
+  endfunction
+
+
+  function! s:on_stdout(job_id, data, event) abort dict
+    let self._chunks[-1] .= a:data[0]
+    call extend(self._chunks, a:data[1:])
+  endfunction
+
+
+  function! s:on_exit(callback, job_id, data, event) abort dict
+    let lines = iskp#strip_lines(self._chunks)
+    return a:callback(lines)
+  endfunction
+endif
 
 
 function! iskp#set_buffer_local_options(ctx) abort

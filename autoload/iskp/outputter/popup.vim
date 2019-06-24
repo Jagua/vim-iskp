@@ -7,31 +7,15 @@ let s:Outputter.Name = 'popup'
 
 
 function! s:Run(ctx) abort
-  if !exists('*popup_atcursor') || !has('job') || !get(a:ctx, 'job', 1)
-    throw 'iskp: require Vim enabled +textprop and +job feature'
-  endif
-  return job_start(a:ctx.cmdlns, {
-        \ 'close_cb' : function('s:close_cb', [a:ctx]),
-        \})
+  call iskp#execute_cmd(a:ctx, function('s:new_popup'))
 endfunction
 let s:Outputter.Run = function('s:Run')
 
 
-function! s:close_cb(ctx, ch) abort
-  call s:popup(a:ctx.word, s:content(a:ch), a:ctx.filetype)
-endfunction
-
-
-function! s:content(ch) abort
-  let lines = []
-  while ch_status(a:ch, {'part' : 'out'}) ==# 'buffered'
-    call add(lines, ch_read(a:ch))
-  endwhile
-  return iskp#strip_lines(lines)
-endfunction
-
-
-function! s:popup(title, content, filetype) abort
+function! s:new_popup(ctx, lines) abort
+  if !exists('*popup_atcursor')
+    throw 'iskp: require Vim enabled +textprop feature'
+  endif
   " FIXME: signwidth is always set 0 because Vim 8.1 does not have
   "        the method in order to know whether |sign| is being displayed.
   let signwidth = 0
@@ -40,18 +24,18 @@ function! s:popup(title, content, filetype) abort
   let col = signwidth + foldwidth + numberwidth + 1
   let popup_opts = {
         \ 'col' : col,
-        \ 'title' : a:title,
+        \ 'title' : a:ctx.word,
         \ 'border' : [],
         \ 'padding' : [0, 1, 0, 1],
         \}
   if get(s:, 'winid', 0) != 0
     call popup_close(s:winid)
   endif
-  let s:winid = popup_atcursor(a:content, popup_opts)
+  let s:winid = popup_atcursor(a:lines, popup_opts)
   if s:winid == 0
     throw 'iskp: failed popup_atcursor()'
   endif
-  call setbufvar(winbufnr(s:winid), '&filetype', printf('iskp.iskp_%s', a:filetype))
+  call setbufvar(winbufnr(s:winid), '&filetype', printf('iskp.iskp_%s', a:ctx.filetype))
 endfunction
 
 

@@ -7,53 +7,27 @@ let s:Outputter.Name = 'buffer'
 
 
 function! s:Run(ctx) abort
-  if has('job') && get(a:ctx, 'job', 1)
-    return job_start(a:ctx.cmdlns, {
-          \ 'close_cb' : function('s:close_cb', [a:ctx]),
-          \})
-  else
-    let lines = systemlist(a:ctx.cmdln)
-    return iskp#new_buffer(lines, a:ctx)
-  endif
+  call iskp#execute_cmd(a:ctx, function('s:new_buffer'))
 endfunction
 let s:Outputter.Run = function('s:Run')
 
 
-function! s:close_cb(ctx, ch) abort
-  let lines = []
-  while ch_status(a:ch, {'part' : 'out'}) ==# 'buffered'
-    call add(lines, ch_read(a:ch))
-  endwhile
-  return iskp#new_buffer(lines, a:ctx)
+function! s:new_buffer(ctx, lines) abort
+  let bufname = iskp#get_bufname(a:ctx)
+  let opener = get(a:ctx, 'open', 'new')
+  if winheight(0) > iskp#strdisplayheight(a:lines)
+    let height = printf('+resize\ %d', iskp#strdisplayheight(a:lines))
+  else
+    let height = ''
+  endif
+  execute printf('%s %s %s', opener, height, bufname)
+
+  " Note: Using execute() prevents to print '\d\+ more lines' message.
+  "       'put = a:lines' (without execute()) prints its message.
+  call execute('put = a:lines')
+  1 delete _
+  call iskp#set_buffer_local_options(a:ctx)
 endfunction
-
-
-if has('nvim')
-  function! s:Run(ctx) abort
-    if exists('*jobstart')
-      return jobstart(a:ctx.cmdlns, {
-            \ '_chunks' : [''],
-            \ 'on_stdout' : function('s:on_stdout'),
-            \ 'on_exit' : function('s:on_exit', [a:ctx]),
-            \})
-    else
-      let lines = systemlist(a:ctx.cmdln)
-      return iskp#new_buffer(lines, a:ctx)
-    endif
-  endfunction
-  let s:Outputter.Run = function('s:Run')
-
-
-  function! s:on_stdout(job_id, data, event) abort dict
-    let self._chunks[-1] .= a:data[0]
-    call extend(self._chunks, a:data[1:])
-  endfunction
-
-
-  function! s:on_exit(ctx, job_id, data, event) abort dict
-    return iskp#new_buffer(self._chunks, a:ctx)
-  endfunction
-endif
 
 
 function! iskp#outputter#buffer#new() abort

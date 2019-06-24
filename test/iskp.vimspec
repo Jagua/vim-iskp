@@ -173,17 +173,33 @@ Describe iskp#outputter#terminal#new().Run(ctx)
   End
 End
 
-Describe iskp#new_buffer(lines, ctx)
+Describe s:new_buffer(lines, ctx)
+  Before all
+    let funcs = s:scope.funcs('autoload/iskp/outputter/buffer.vim')
+  End
+
+  After all
+    unlet funcs
+  End
+
   It should create a new buffer and print text
-    call iskp#new_buffer(['1', '2'], {})
+    call funcs.new_buffer({}, ['1', '2'])
     Assert Equals(getline(1, '$'), ['1', '2'])
     bdelete!
   End
 End
 
-Describe iskp#new_preview(lines, ctx)
+Describe s:new_preview(lines, ctx)
+  Before all
+    let funcs = s:scope.funcs('autoload/iskp/outputter/preview.vim')
+  End
+
+  After all
+    unlet funcs
+  End
+
   It should open a preview window and print text
-    call iskp#new_preview(['1', '2'], {})
+    call funcs.new_preview({}, ['1', '2'])
     Assert True(&previewwindow)
     Assert Equals(getline(1, '$'), ['1', '2'])
     bdelete!
