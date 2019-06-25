@@ -20,10 +20,12 @@ before_install:
   - cd /tmp/vim
   - ./configure --with-features=huge --enable-fail-if-missing --prefix="${HOME}/local"
   - make -j2 && make install
+  - cd "${TRAVIS_BUILD_DIR}"
 
 before_script:
-  - git clone --depth 1 https://github.com/thinca/vim-themis /tmp/vim-themis
+  - git clone --depth 1 https://github.com/thinca/vim-themis "${THEMIS_HOME}"
 
 script:
   - "\"${THEMIS_VIM}\" --version"
+  - "\"${THEMIS_HOME}/bin/themis\" --version"
   - "${THEMIS_HOME}/bin/themis"
