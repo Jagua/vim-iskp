@@ -3,7 +3,6 @@ language: generic
 
 os:
   - linux
-  - osx
 
 sudo: false
 
@@ -11,9 +10,19 @@ addons:
   apt:
     update: true
 
+env:
+  - THEMIS_HOME=/tmp/vim-themis
+  - THEMIS_VIM="${HOME}/local/bin/vim"
+
+before_install:
+  - git clone --depth 1 --branch master --single-branch https://github.com/vim/vim.git /tmp/vim
+  - cd /tmp/vim
+  - ./configure --with-features=huge --enable-fail-if-missing --prefix="${HOME}/local"
+  - make -j2 && make install
+
 before_script:
   - git clone --depth 1 https://github.com/thinca/vim-themis /tmp/vim-themis
 
 script:
-  - vim --version
-  - /tmp/vim-themis/bin/themis
+  - '"${THEMIS_VIM}" --version'
+  - '"${THEMIS_HOME}/bin/themis"'
