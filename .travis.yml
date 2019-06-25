@@ -25,5 +25,5 @@ before_script:
   - git clone --depth 1 https://github.com/thinca/vim-themis /tmp/vim-themis
 
 script:
-  - "${THEMIS_VIM}" --version
+  - "\"${THEMIS_VIM}\" --version"
   - "${THEMIS_HOME}/bin/themis"
