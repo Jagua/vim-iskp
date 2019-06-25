@@ -11,8 +11,9 @@ addons:
     update: true
 
 env:
-  - THEMIS_HOME=/tmp/vim-themis
-  - THEMIS_VIM="${HOME}/local/bin/vim"
+  global:
+    - THEMIS_HOME=/tmp/vim-themis
+    - THEMIS_VIM="${HOME}/local/bin/vim"
 
 before_install:
   - git clone --depth 1 --branch master --single-branch https://github.com/vim/vim.git /tmp/vim
