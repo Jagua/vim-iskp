@@ -155,7 +155,8 @@ endfunction
 
 function! iskp#strdisplayheight(lines) abort
   let i = 0
-  let winwidth = winwidth(0) - &foldcolumn - (&number ? &numberwidth : 0)
+  let numberwidth = &number ? max([&numberwidth, float2nr(ceil(log10(line('$')))) + 1]) : 0
+  let winwidth = winwidth(0) - &foldcolumn - numberwidth
   for line in a:lines
     let i += empty(line) ? 1 : float2nr(ceil(round(strdisplaywidth(line)) / round(winwidth)))
   endfor
