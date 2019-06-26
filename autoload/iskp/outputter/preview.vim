@@ -15,7 +15,7 @@ let s:Outputter.Run = function('s:Run')
 function! s:new_preview(ctx, lines) abort
   let bufname = iskp#get_bufname(a:ctx)
   let opener = get(a:ctx, 'open', 'pedit')
-  if &previewheight > iskp#strdisplayheight(a:lines)
+  if winheight(0) > iskp#strdisplayheight(a:lines)
     let height = printf('+resize\ %d', iskp#strdisplayheight(a:lines))
   else
     let height = ''
