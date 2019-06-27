@@ -14,7 +14,7 @@ let s:Outputter.Run = function('s:Run')
 
 function! s:new_popup(ctx, lines) abort
   if !exists('*popup_atcursor')
-    throw 'iskp: require Vim enabled +textprop feature'
+    throw 'iskp: popup: require Vim enabled +textprop feature'
   endif
   " FIXME: signwidth is always set 0 because Vim 8.1 does not have
   "        the method in order to know whether |sign| is being displayed.
@@ -33,7 +33,7 @@ function! s:new_popup(ctx, lines) abort
   endif
   let s:winid = popup_atcursor(a:lines, popup_opts)
   if s:winid == 0
-    throw 'iskp: failed popup_atcursor()'
+    throw 'iskp: popup: failed popup_atcursor()'
   endif
   call setbufvar(winbufnr(s:winid), '&filetype', printf('iskp.iskp_%s', a:ctx.filetype))
 endfunction
