@@ -28,4 +28,4 @@ before_script:
 script:
   - "\"${THEMIS_VIM}\" --version"
   - "\"${THEMIS_HOME}/bin/themis\" --version"
-  - "${THEMIS_HOME}/bin/themis"
+  - "\"${THEMIS_HOME}/bin/themis\""
