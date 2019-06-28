@@ -1,6 +1,6 @@
 let s:scope = themis#helper('scope')
 
-Context <Plug>(iskp)
+Describe <Plug>(iskp)
   It is available in proper modes
     Assert Equals(maparg('<Plug>(iskp)', 'c'), '')
     Assert Equals(maparg('<Plug>(iskp)', 'i'), '')
