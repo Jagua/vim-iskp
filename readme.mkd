@@ -1,5 +1,6 @@
 # vim-iskp
 
 [![Build Status](https://travis-ci.org/Jagua/vim-iskp.svg?branch=master)](https://travis-ci.org/Jagua/vim-iskp)
+[![codecov](https://codecov.io/gh/Jagua/vim-iskp/branch/master/graph/badge.svg)](https://codecov.io/gh/Jagua/vim-iskp)
 
 **vim-iskp** is a Vim plugin to improve **K**.

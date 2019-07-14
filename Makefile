@@ -1,18 +1,24 @@
 .PHONY: all lint test coverage
 
+BUILD_DIR := ./build
+PROFILE_LOG := $(BUILD_DIR)/profile.txt
+COVERAGE_OUTPUT := $(BUILD_DIR)/coverage.xml
+COVIMERAGE_DATA_FILE := $(BUILD_DIR)/.coverage.covimerage
+SHELL := bash -O globstar
+
 all: lint test
 
 lint:
-	vimlparser plugin/*.vim autoload/*.vim > /dev/null
-	vint autoload plugin
+	vimlparser plugin/*.vim autoload/**/*.vim > /dev/null
+	vint plugin autoload
 
 test:
 	themis
 
 coverage:
-	mkdir -p build
-	rm -f ./build/coverage.xml ./build/profile.txt ./build/.coverage.covimerage
-	PROFILE_LOG=./build/profile.txt themis
-	covimerage write_coverage ./build/profile.txt --data-file ./build/.coverage.covimerage
-	coverage xml -o ./build/coverage.xml
+	mkdir -p $(BUILD_DIR)
+	rm -f $(COVERAGE_OUTPUT) $(PROFILE_LOG) $(COVIMERAGE_DATA_FILE)
+	PROFILE_LOG=$(PROFILE_LOG) themis
+	covimerage write_coverage $(PROFILE_LOG) --data-file $(COVIMERAGE_DATA_FILE)
+	coverage xml -o $(COVERAGE_OUTPUT)
 	coverage report
