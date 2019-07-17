@@ -6,64 +6,72 @@ let s:Outputter = {}
 let s:Outputter.Name = 'terminal'
 
 
-function! s:Run(ctx, ...) abort dict
-  if !has('timers')
-    throw 'iskp: terminal: require Vim enabled +timers feature'
-  endif
-  let l:Rewind = {ch -> execute([
-        \ 'if has("nvim")',
-        \ '  return',
-        \ 'elseif exists("*term_wait") && exists("*ch_getbufnr")',
-        \ '  call term_wait(ch_getbufnr(ch, "out"))',
-        \ '  1',
-        \ '  redraw',
-        \ 'elseif has("timers")',
-        \ '  call timer_start(250, {ctx -> execute(["1", "redraw"])})',
-        \ 'endif',
-        \], '')}
-  let self.buf = s:term(a:ctx.cmdlns, {
+function! s:Run(ctx) abort dict
+  let resp = s:term(a:ctx.cmdlns, {
         \ 'term_name' : iskp#get_bufname(a:ctx),
-        \ 'exit_cb' : l:Rewind,
+        \ 'exit_cb' : function('s:exit_cb'),
         \})
-  return {
-        \ 'buf' : self.buf,
-        \ 'Wait' : function('s:Wait'),
-        \}
+  return {'Wait' : function('s:Wait', [], resp)}
 endfunction
 let s:Outputter.Run = function('s:Run')
-let s:Outputter.buf = 0
 
 
-function! s:Wait(opt) abort dict
-  if has('nvim')
-    throw 'iskp: terminal: s:Wait() does not work in Nvim'
-  endif
+function! s:Wait(...) abort dict
   let timeout_default = 5000
-  let timeout = get(a:opt, 'timeout', timeout_default)
-  let buf = self.buf
-  if empty(buf)
+  let timeout = get(get(a:, '1', {}), 'timeout', timeout_default)
+  if !has('nvim')
+    return call(funcref('s:wait_on_vim'), [timeout], self)
+  else
+    return call(funcref('s:wait_on_neovim'), [timeout], self)
+  endif
+endfunction
+
+
+function! s:wait_on_vim(timeout) abort dict
+  if empty(self.bufnr)
     return {'buf' : 0}
   endif
-  let ctr = timeout / 50
-  while empty(filter(split(term_getstatus(buf), ','), 'v:val ==# "finished"'))
+  let ctr = a:timeout / 50
+  while empty(filter(split(term_getstatus(self.bufnr), ','), 'v:val ==# "finished"'))
         \ && ctr >= 0
     sleep 50m
     let ctr -= 1
   endwhile
   if ctr < 0
-    call job_stop(term_getjob(buf))
+    call job_stop(term_getjob(self.bufnr))
   endif
+  return {'buf' : self.bufnr}
+endfunction
 
-  return {'buf' : buf}
+
+function! s:wait_on_neovim(timeout) abort dict
+  if self.job_id == 0
+    return {'buf' : 0}
+  endif
+  while jobwait([self.job_id], a:timeout)[0] >= 0
+    sleep 100m
+  endwhile
+  return {'buf' : self.bufnr}
+endfunction
+
+
+function! s:exit_cb(job, ...) abort
+  if exists('*term_wait') && exists('*ch_getbufnr')
+    call term_wait(ch_getbufnr(a:job, 'out'))
+    1
+    redraw
+  endif
 endfunction
 
 
 function! s:term(cmd, term_opts) abort
   if has('terminal')
-    return term_start(a:cmd, a:term_opts)
+    let bufnr = term_start(a:cmd, a:term_opts)
+    return {'bufnr' : bufnr}
   elseif has('nvim') && exists('*termopen')
     new
-    return termopen(a:cmd, a:term_opts)
+    let job_id = termopen(a:cmd, a:term_opts)
+    return {'bufnr' : bufnr('%'), 'job_id' : job_id}
   else
     throw 'iskp: terminal: require Vim enabled +terminal feature'
   endif

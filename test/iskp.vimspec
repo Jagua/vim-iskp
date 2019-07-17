@@ -104,30 +104,26 @@ End
 
 Describe iskp#outputter#default#new().Run(ctx)
   It should run a terminal if available
-    if !has('terminal')
+    if !has('terminal') && !exists('*termopen')
       Skip Vim not enabled +terminal feature
     endif
 
     call iskp#outputter#default#new()
           \.Run({'cmdln': 'vim --version', 'cmdlns': ['vim', '--version'], 'job' : 0})
-    Assert Equals(len(term_list()), 1)
+          \.Wait({'timeout' : 5000})
+    Assert Equals(&buftype, 'terminal')
     bdelete!
   End
 
   It should print text in the terminal if available
-    if !has('terminal')
+    if !has('terminal') && !exists('*termopen')
       Skip Vim not enabled +terminal feature
     endif
 
     call iskp#outputter#default#new()
           \.Run({'cmdln': 'vim --version', 'cmdlns': ['vim', '--version'], 'job' : 0})
-    let timeout_msec = 5000
-    let interval = 10
-    let ctr = 0
-    while term_getstatus(term_list()[0]) ==# 'running' && ctr * interval < timeout_msec
-      execute printf('sleep %dm', interval)
-      let ctr += 1
-    endwhile
+          \.Wait({'timeout' : 5000})
+    Assert Equals(&buftype, 'terminal')
     Assert Match(getline(1), 'VIM - Vi IMproved')
     bdelete!
   End
@@ -158,15 +154,13 @@ End
 
 Describe iskp#outputter#terminal#new().Run(ctx)
   It should print text in the terminal window
-    if !has('terminal')
+    if !has('terminal') && !exists('*termopen')
       Skip Vim not enabled +terminal feature
     endif
 
-    Assert Equals(len(term_list()), 0)
     let l:term_buf = iskp#outputter#terminal#new()
           \.Run({'cmdlns': ['vim', '--version']})
           \.Wait({'timeout' : 3000}).buf
-    Assert Equals(len(term_list()), 1)
     Assert Equals(&buftype, 'terminal')
     Assert Match(getbufline(l:term_buf, 1)[0], 'VIM - Vi IMproved')
     bdelete!

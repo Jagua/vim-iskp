@@ -11,7 +11,8 @@ function! s:Run(ctx) abort
         \ && has_key(g:iskp_outputters, b:iskp_outputter)
     return g:iskp_outputters[b:iskp_outputter].Run(a:ctx)
   endif
-  if has('terminal') && has_key(g:iskp_outputters, 'terminal')
+  if (has('terminal') || has('nvim') && exists('*termopen'))
+        \ && has_key(g:iskp_outputters, 'terminal')
     return g:iskp_outputters['terminal'].Run(a:ctx)
   elseif has_key(g:iskp_outputters, 'buffer')
     return g:iskp_outputters['buffer'].Run(a:ctx)
