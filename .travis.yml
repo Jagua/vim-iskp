@@ -4,27 +4,64 @@ language: generic
 os:
   - linux
 
-addons:
-  apt:
-    update: true
-    packages:
-      - python3
-      - python3-pip
-
 env:
   global:
     - THEMIS_HOME=/tmp/vim-themis
-    - THEMIS_VIM="${HOME}/local/bin/vim"
     - PROFILE_LOG="${TRAVIS_BUILD_DIR}/build/profile.txt"
+
+matrix:
+  include:
+    - name: "Vim"
+      env: >-
+        VIM=vim
+        THEMIS_VIM="${HOME}/local/bin/vim"
+        VINT_OPTS=
+        VIMLPARSER_OPTS=
+      addons:
+        apt:
+          update: true
+          packages:
+            - python3
+            - python3-pip
+    - name: "Neovim"
+      env: >-
+        VIM=neovim
+        THEMIS_VIM="${HOME}/local/bin/nvim"
+        THEMIS_ARGS="-e -s --headless"
+        VINT_OPTS="--enable-neovim"
+        VIMLPARSER_OPTS="-neovim"
+      addons:
+        apt:
+          update: true
+          packages:
+            - python3
+            - python3-pip
+            - ninja-build
+            - gettext
+            - libtool
+            - libtool-bin
+            - autoconf
+            - automake
+            - cmake
+            - g++
+            - pkg-config
+            - unzip
 
 before_install:
   - pip3 install --upgrade pip
   - pip3 install --user vim-vint covimerage
   - go get github.com/haya14busa/go-vimlparser/cmd/vimlparser
-  - git clone --depth 1 --branch master --single-branch https://github.com/vim/vim.git /tmp/vim
-  - cd /tmp/vim
-  - ./configure --with-features=huge --enable-fail-if-missing --prefix="${HOME}/local"
-  - make -j3 && make install
+  - |
+    if [ "${VIM}" = "vim" ]; then
+      git clone --depth 1 --branch master --single-branch https://github.com/vim/vim.git /tmp/vim
+      cd /tmp/vim
+      ./configure --with-features=huge --enable-fail-if-missing --prefix="${HOME}/local"
+      make -j3 && make install
+    elif [ "${VIM}" = "neovim" ]; then
+      git clone --depth 1 --branch master --single-branch https://github.com/neovim/neovim.git /tmp/neovim
+      cd /tmp/neovim
+      make -j3 CMAKE_EXTRA_FLAGS="-DCMAKE_INSTALL_PREFIX:PATH=${HOME}/local" install
+    fi
   - cd "${TRAVIS_BUILD_DIR}"
 
 before_script:
@@ -38,8 +75,8 @@ script:
   - "\"${THEMIS_HOME}/bin/themis\""
 
 after_success:
-  - vint plugin autoload
-  - vimlparser plugin/*.vim autoload/**/*.vim > /dev/null
+  - vint ${VINT_OPTS} plugin autoload
+  - vimlparser ${VIMLPARSER_OPTS} plugin/*.vim autoload/**/*.vim > /dev/null
   - covimerage write_coverage "${PROFILE_LOG}" --data-file ./build/.coverage.covimerage
   - coverage xml
   - coverage report
